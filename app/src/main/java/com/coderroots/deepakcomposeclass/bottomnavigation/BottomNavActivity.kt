@@ -22,8 +22,12 @@ import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -156,12 +160,49 @@ fun BottomNavScreen(){
 
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(){
+    var expend by remember { mutableStateOf(false) }
+    var showName by  remember { mutableStateOf("") }
+    var list = listOf<String>("Deepak","Mukesh","Abhishek","Rajat Singh")
     Box(Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center){
 
-            Text("Home Screen")
+        ExposedDropdownMenuBox(
+            expanded = expend,
+            onExpandedChange = {
+                expend = !expend
+            }
+        ) {
+            OutlinedTextField(
+                value = showName,
+                onValueChange = { },
+                singleLine = true,
+                readOnly = true,
+                label = {
+                    Text("Select Name")
+                },
+                modifier = Modifier.fillMaxWidth().menuAnchor()
+            )
+            ExposedDropdownMenu(
+                expanded = expend,
+                onDismissRequest = { expend = false}
+            ) {
+                list.forEach { item->
+                    DropdownMenuItem(
+                        text = {
+                            Text(item)
+                        },
+                        onClick = {
+                            showName = item
+                            expend = false
+                        }
+                    )
+                }
+            }
+
+        }
     }
 }
 
