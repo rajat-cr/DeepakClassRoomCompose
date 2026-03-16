@@ -5,10 +5,12 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.widget.Space
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,6 +25,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.AccountCircle
@@ -34,6 +37,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -47,6 +51,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,9 +61,13 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.coderroots.deepakcomposeclass.OpenDialog
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class BottomNavActivity: ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -246,12 +255,104 @@ fun ProfileScreen(){
 
 }
 
+@Preview(showSystemUi = true)
 @Composable
 fun SettingScreen(){
+    var showDialog by remember { mutableStateOf(false) }
     Box(Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center){
-        Text("Setting Screen")
+        ){
+        FloatingActionButton(
+            onClick = {
+                showDialog = true
+            },
+            modifier = Modifier.align(Alignment.BottomEnd).padding(10.dp)
+        ) {
+            Icon(Icons.Default.Add,
+                contentDescription = null)
+        }
+
     }
 
+    if(showDialog){
+        ShowDialog(
+            dismiss = {showDialog = false}
+        )
+    }
+
+}
+
+@Composable
+fun ShowDialog(dismiss: () -> Unit) {
+    var name by  remember { mutableStateOf("") }
+    var contact by  remember { mutableStateOf("") }
+    val context = LocalContext.current
+    val userDatabase = UserDatabase.getInstance(context)
+    val scope = rememberCoroutineScope()
+    val userDao = userDatabase?.userDao()
+
+
+    Dialog(
+        onDismissRequest = {
+            dismiss()
+        },
+        content = {
+            Box(Modifier.fillMaxWidth().background(color = colorResource(R.color.white))){
+                Column(Modifier.fillMaxWidth().padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                    )
+                {
+                    Text("Add User")
+                    Spacer(Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = {
+                            name = it
+                        },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp),
+                        singleLine = true,
+                        maxLines = 1,
+                        label = {
+                            Text("Name")
+                        }
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = contact,
+                        onValueChange = {
+                            contact = it
+                        },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp),
+                        singleLine = true,
+                        maxLines = 1,
+                        label = {
+                            Text("Contact")
+                        }
+                    )
+                    Spacer(Modifier.height(10.dp))
+
+                    ElevatedButton(
+                        onClick = {
+                            if(name.isEmpty()){
+                                Toast.makeText(context,"Enter Name", Toast.LENGTH_SHORT).show()
+                            }else if(contact.isEmpty()){
+                                Toast.makeText(context,"Enter Contact", Toast.LENGTH_SHORT).show()
+                            }else{
+                                scope.launch(Dispatchers.IO) {
+                                    val userEntity =
+                                        UserEntity(userName = name, contactNumber = contact)
+                                    userDao?.addUser(userEntity)
+                                    dismiss()
+                                }
+                                Toast.makeText(context,"Data Added",Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        shape = RoundedCornerShape(7.dp)
+                    ) {
+                        Text("ADD USER")
+                    }
+                }
+            }
+        }
+    )
 }
 
