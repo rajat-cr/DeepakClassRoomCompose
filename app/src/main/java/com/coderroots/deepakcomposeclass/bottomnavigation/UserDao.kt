@@ -3,6 +3,7 @@ package com.coderroots.deepakcomposeclass.bottomnavigation
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 
@@ -14,4 +15,7 @@ interface UserDao {
 
     @Query("Select * from UserEntity")
     fun getUsers(): Flow<List<UserEntity>>
+
+    @Update
+    fun updateUser(userEntity: UserEntity)
 }

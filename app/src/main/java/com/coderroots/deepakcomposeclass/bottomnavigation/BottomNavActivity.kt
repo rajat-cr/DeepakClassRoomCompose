@@ -2,10 +2,7 @@ package com.coderroots.deepakcomposeclass.bottomnavigation
 
 import android.R
 import android.annotation.SuppressLint
-import android.content.Context
-import android.content.SharedPreferences
 import android.os.Bundle
-import android.widget.Space
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -22,17 +19,22 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.BottomAppBar
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -43,11 +45,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -65,7 +66,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.coderroots.deepakcomposeclass.OpenDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -258,12 +258,61 @@ fun ProfileScreen(){
 @Preview(showSystemUi = true)
 @Composable
 fun SettingScreen(){
+    val context = LocalContext.current
+    val userDatabase = UserDatabase.getInstance(context)
+    val userList = userDatabase?.userDao()?.getUsers()?.collectAsState(emptyList())?.value
     var showDialog by remember { mutableStateOf(false) }
+    var selectedIndex by remember { mutableStateOf(-1) }
+
+
     Box(Modifier.fillMaxSize(),
         ){
+        if(userList?.isNotEmpty() == true){
+        LazyColumn(Modifier.fillMaxSize().padding(horizontal = 10.dp)) {
+            items(userList.size) { index ->
+                val model = userList[index]
+                Card(
+                    Modifier.fillMaxWidth().padding(top = 10.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color.White
+                    ),
+                    elevation = CardDefaults.cardElevation(
+                        defaultElevation = 3.dp
+                    )
+                ) {
+                    Row(Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.fillMaxWidth().weight(1f).padding(10.dp),
+                            verticalArrangement = Arrangement.Center
+                            ) {
+                            Text(model.userName.toString())
+                            Text(model.contactNumber.toString())
+                        }
+
+                        Icon(Icons.Default.Edit,
+                            contentDescription = "",
+                            modifier = Modifier.clickable{
+                                showDialog = true
+                                selectedIndex = index
+
+                            })
+                        Spacer(Modifier.height(5.dp))
+                        Icon(Icons.Default.Delete,
+                            contentDescription = "",
+                            modifier = Modifier.clickable{
+
+                            })
+                        Spacer(Modifier.width(5.dp))
+                    }
+                }
+            }
+        }
+        }
+
         FloatingActionButton(
             onClick = {
                 showDialog = true
+                selectedIndex = -1
             },
             modifier = Modifier.align(Alignment.BottomEnd).padding(10.dp)
         ) {
@@ -275,20 +324,28 @@ fun SettingScreen(){
 
     if(showDialog){
         ShowDialog(
-            dismiss = {showDialog = false}
+            userList = userList,
+            dismiss = {showDialog = false},
+            selectedIndex = selectedIndex
         )
     }
 
 }
 
 @Composable
-fun ShowDialog(dismiss: () -> Unit) {
+fun ShowDialog(dismiss: () -> Unit, selectedIndex: Int, userList: List<UserEntity>?) {
     var name by  remember { mutableStateOf("") }
     var contact by  remember { mutableStateOf("") }
     val context = LocalContext.current
     val userDatabase = UserDatabase.getInstance(context)
     val scope = rememberCoroutineScope()
     val userDao = userDatabase?.userDao()
+      // 0  !=-1
+    if(selectedIndex!=-1)
+    {
+        name = userList!![selectedIndex].userName.toString()
+        contact = userList[selectedIndex].contactNumber.toString()
+    }
 
 
     Dialog(
@@ -301,7 +358,11 @@ fun ShowDialog(dismiss: () -> Unit) {
                     horizontalAlignment = Alignment.CenterHorizontally
                     )
                 {
-                    Text("Add User")
+                    Text(if(selectedIndex == -1)
+                        "Add User"
+                    else
+                    "Update User"
+                    )
                     Spacer(Modifier.height(10.dp))
                     OutlinedTextField(
                         value = name,
@@ -336,19 +397,32 @@ fun ShowDialog(dismiss: () -> Unit) {
                                 Toast.makeText(context,"Enter Name", Toast.LENGTH_SHORT).show()
                             }else if(contact.isEmpty()){
                                 Toast.makeText(context,"Enter Contact", Toast.LENGTH_SHORT).show()
-                            }else{
-                                scope.launch(Dispatchers.IO) {
-                                    val userEntity =
-                                        UserEntity(userName = name, contactNumber = contact)
-                                    userDao?.addUser(userEntity)
-                                    dismiss()
+                            }else {
+                                val userEntity = UserEntity(userName = name, contactNumber = contact)
+                                if (selectedIndex == -1) {
+                                    scope.launch(Dispatchers.IO) {
+                                        userDao?.addUser(userEntity)
+                                        dismiss()
+                                    }
+                                    Toast.makeText(context, "Data Added", Toast.LENGTH_SHORT).show()
+                                }else{
+                                    userEntity.id = userList?.get(selectedIndex)?.id?:0
+                                    scope.launch(Dispatchers.IO) {
+                                        userDao?.updateUser(userEntity)
+                                        dismiss()
+                                    }
+                                    Toast.makeText(context, "Data Update", Toast.LENGTH_SHORT).show()
+
                                 }
-                                Toast.makeText(context,"Data Added",Toast.LENGTH_SHORT).show()
                             }
                         },
                         shape = RoundedCornerShape(7.dp)
                     ) {
-                        Text("ADD USER")
+                        Text(
+                            if(selectedIndex == -1)
+                            "ADD USER"
+                        else
+                        "UPDATE USER")
                     }
                 }
             }
