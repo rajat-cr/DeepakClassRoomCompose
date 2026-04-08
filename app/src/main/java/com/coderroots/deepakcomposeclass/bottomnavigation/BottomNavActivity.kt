@@ -29,9 +29,11 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -66,6 +68,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.google.firebase.Firebase
+import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -153,6 +157,22 @@ fun BottomNavScreen(){
                                 launchSingleTop = true
                             }
                         })
+
+                    Icon(if(selectedIndex == 3)
+                        Icons.Filled.ShoppingCart
+                    else
+                        Icons.Outlined.ShoppingCart,
+                        contentDescription = "",
+                        modifier = Modifier.size(30.dp).clickable{
+                            selectedIndex = 2
+                            navController.navigate("firebase"){
+                                popUpTo(navController.graph.startDestinationId){
+                                    saveState = true
+                                }
+                                restoreState = true
+                                launchSingleTop = true
+                            }
+                        })
                 }
             }
         }
@@ -171,12 +191,123 @@ fun BottomNavScreen(){
             composable("setting") {
                 SettingScreen()
             }
+            composable("firebase") {
+                FirebaseScreen()
+            }
         }
 
 
     }
 
 }
+
+@Preview(showSystemUi = true)
+@Composable
+fun FirebaseScreen() {
+    var showDialog by remember { mutableStateOf(false) }
+    val db = Firebase.firestore
+
+   Box(Modifier.fillMaxSize()){
+       FloatingActionButton(
+           onClick = {
+               showDialog = true
+           },
+           modifier = Modifier.align(Alignment.BottomEnd).padding(10.dp)
+       ) {
+           Icon(Icons.Default.Add,
+               contentDescription = "")
+       }
+   }
+    if(showDialog){
+        FirebaseDialog(
+            onDismiss = {showDialog = false}
+        )
+    }
+}
+
+@Composable
+fun FirebaseDialog(onDismiss: () -> Unit) {
+    val db = Firebase.firestore
+    val context = LocalContext.current
+    var name by  remember { mutableStateOf("") }
+    var rollNo by remember { mutableStateOf("") }
+    Dialog(
+        onDismissRequest = { onDismiss()},
+        content = {
+            Box(Modifier.fillMaxWidth().background(color = Color.White, shape = RoundedCornerShape(7.dp))){
+                Column(Modifier.fillMaxWidth().padding(10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally){
+                    Text("ADD Student Detail's")
+                    Spacer(Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = {
+                            name = it
+                        },
+                        placeholder = {
+                            Text("Enter Name")
+                        },
+                        label = {
+                            Text("Enter Name")
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = rollNo,
+                        onValueChange = {
+                            rollNo = it
+                        },
+                        placeholder = {
+                            Text("Enter Roll No.")
+                        },
+                        label = {
+                            Text("Enter Roll No.")
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    ElevatedButton(
+                        onClick = {
+                            if(name.isEmpty()){
+                                Toast.makeText(context, "Enter Your Name", Toast.LENGTH_SHORT).show()
+                            }   else  if(rollNo.isEmpty()){
+                            Toast.makeText(context, "Enter Your Roll No.", Toast.LENGTH_SHORT).show()
+                        } else {
+                            val studentModel = StudentModel()
+                                studentModel.name = name
+                                studentModel.rollNo = rollNo.toInt()
+                            db.collection("UserDetails").add(studentModel).addOnCompleteListener {
+                                if(it.isSuccessful){
+
+                                    Toast.makeText(context,"Data Store", Toast.LENGTH_SHORT).show()
+                                }else {
+                                    Toast.makeText(context,"${it.exception?.message}", Toast.LENGTH_SHORT).show()
+                                }
+                            }.addOnFailureListener {
+                                println("Check Exception Firestore: ${it.message}")
+                            }
+
+                                onDismiss()
+                            }
+                        },
+
+                    ) {
+                        Text("ADD DETAIL'S")
+                    }
+                }
+
+            }
+        }
+    )
+}
+
+
+data class StudentModel(
+    var id: String? =null,
+    var name: String? = null,
+    var rollNo: Int = 0
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
