@@ -72,4 +72,6 @@ dependencies {
     // No additional plugins are necessary
     annotationProcessor("androidx.room:room-compiler:$room_version")
 
+    implementation("io.coil-kt:coil-compose:2.4.0")
+
 }

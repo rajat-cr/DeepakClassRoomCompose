@@ -1,12 +1,17 @@
 package com.coderroots.deepakcomposeclass.bottomnavigation
 
-import android.R
 import android.annotation.SuppressLint
+import android.content.Context
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -61,13 +66,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.core.content.ContextCompat
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import coil.compose.AsyncImage
+import com.coderroots.deepakcomposeclass.R
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.Dispatchers
@@ -100,7 +109,7 @@ fun BottomNavScreen(){
                         fontWeight = FontWeight.Bold)
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = colorResource(R.color.holo_purple),
+                    containerColor = colorResource(R.color.purple_200),
                     titleContentColor = Color.White
                 )
             )
@@ -279,7 +288,6 @@ fun FirebaseDialog(onDismiss: () -> Unit) {
                                 studentModel.rollNo = rollNo.toInt()
                             db.collection("UserDetails").add(studentModel).addOnCompleteListener {
                                 if(it.isSuccessful){
-
                                     Toast.makeText(context,"Data Store", Toast.LENGTH_SHORT).show()
                                 }else {
                                     Toast.makeText(context,"${it.exception?.message}", Toast.LENGTH_SHORT).show()
@@ -315,44 +323,97 @@ fun HomeScreen(){
     var expend by remember { mutableStateOf(false) }
     var showName by  remember { mutableStateOf("") }
     var list = listOf<String>("Deepak","Mukesh","Abhishek","Rajat Singh")
-    Box(Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center){
+    var imageUri = remember { mutableStateOf<Uri?>(null) }
+    val context = LocalContext.current
+    val gallerypermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted->
+        if(granted){
+            Toast.makeText(context, "Permission Granted",Toast.LENGTH_SHORT).show()
+        }else{
+            Toast.makeText(context, "Permission Not Granted",Toast.LENGTH_SHORT).show()
+        }
+    }
 
-        ExposedDropdownMenuBox(
-            expanded = expend,
-            onExpandedChange = {
-                expend = !expend
-            }
-        ) {
-            OutlinedTextField(
-                value = showName,
-                onValueChange = { },
-                singleLine = true,
-                readOnly = true,
-                label = {
-                    Text("Select Name")
-                },
-                modifier = Modifier.fillMaxWidth().menuAnchor()
-            )
-            ExposedDropdownMenu(
+    val pickImageGallery = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()){ image->
+        if(image!=null) {
+            imageUri.value = image
+        }
+
+    }
+
+    Box(Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center) {
+        Column(Modifier.fillMaxSize()) {
+
+
+            ExposedDropdownMenuBox(
                 expanded = expend,
-                onDismissRequest = { expend = false}
-            ) {
-                list.forEach { item->
-                    DropdownMenuItem(
-                        text = {
-                            Text(item)
-                        },
-                        onClick = {
-                            showName = item
-                            expend = false
-                        }
-                    )
+                onExpandedChange = {
+                    expend = !expend
                 }
+            ) {
+                OutlinedTextField(
+                    value = showName,
+                    onValueChange = { },
+                    singleLine = true,
+                    readOnly = true,
+                    label = {
+                        Text("Select Name")
+                    },
+                    modifier = Modifier.fillMaxWidth().menuAnchor()
+                )
+                ExposedDropdownMenu(
+                    expanded = expend,
+                    onDismissRequest = { expend = false }
+                ) {
+                    list.forEach { item ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(item)
+                            },
+                            onClick = {
+                                showName = item
+                                expend = false
+                            }
+                        )
+                    }
+                }
+
+            }
+
+
+            Spacer(Modifier.height(10.dp))
+
+            AsyncImage(
+                model = imageUri.value,
+                placeholder = painterResource(R.drawable.ic_launcher_background),
+                contentDescription = "",
+                modifier = Modifier.size(200.dp)
+            )
+
+            Spacer(Modifier.height(10.dp))
+            ElevatedButton(
+                onClick =
+                    {
+                        if (checkPermission(context)) {
+                            pickImageGallery.launch("image/*")
+
+                        } else {
+                            gallerypermission.launch(android.Manifest.permission.READ_MEDIA_IMAGES)
+                        }
+                    }
+            ) {
+                Text("Open Gallery")
             }
 
         }
+
     }
+
+}
+fun checkPermission(context: Context): Boolean{
+
+    return ContextCompat.checkSelfPermission(context, android.Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED
+
 }
 
 @SuppressLint("CommitPrefEdits")
